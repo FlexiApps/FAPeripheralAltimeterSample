@@ -68,7 +68,8 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 
     count = 0;
     countSensor = 0;
-    restartTimerPeriod = 60;
+    restartTimerPeriod = 10;
+    self.sensorPeriodTime.text = @"10";
     
     //Keyboard stuff
    UITapGestureRecognizer *tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
@@ -79,6 +80,12 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 - (void)handleSingleTap:(UITapGestureRecognizer *) sender
 {
     restartTimerPeriod = [self.sensorPeriodTime.text intValue];
+    if (restartTimerPeriod < 5 || restartTimerPeriod > 60) {
+        // You can make the text red here for example
+        restartTimerPeriod = 10;
+        self.sensorPeriodTime.text = @"10";
+    }
+
     [self.view endEditing:YES];
 }
 
@@ -277,7 +284,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
     else {
         NSLog(@"STEP: PERIPHERAL ADDED in DEVICES: %@", peripheral.name);
         [self.devices addObject:peripheral];
-        if ([peripheral.name isEqualToString: @"KYC:9C1D58154DC1"] ) {//9C1D58154DC1 //9C1D58154F80
+        if ([peripheral.name isEqualToString: @"KYC:78A5044563E7"] ) {//9C1D58154DC1 //9C1D58154F80 //78A5044563E7
             [self.manager connectPeripheral:peripheral options:nil];
             [self.manager stopScan];
         }
@@ -290,6 +297,11 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
     NSLog(@"STEP: didConnectPeripheral: %@", peripheral.name);
+    if (self.restartTimer) {
+        [self.restartTimer invalidate];
+        self.restartTimer = nil;
+    }
+    
     peripheral.delegate = self;
     self.connectedPeripheral = peripheral;
     [NSThread sleepForTimeInterval:4.0f];//Not sure if we need this one
@@ -305,7 +317,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 
 
 - (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-    NSLog(@"STEP: didDisconnectPeripheral: %@", peripheral.name);
+    NSLog(@"--=== STEP: didDisconnectPeripheral: %@ ===--", peripheral.name);
 //    dispatch_async(dispatch_get_main_queue(), ^{
 //        self.currentStateLabel.text =  [NSString stringWithFormat:@"Disconnected:  %@", peripheral.name];
 //    });
@@ -440,7 +452,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
                 DDLogInfo(@" %@  %@ | %@ | %@ | %@ | Latitude | %.8f | Longtitude | %.8f", self.sensorDataLabel.text, self.batteryLabel.text, self.relativeAltitude.text, self.pressureLabel.text, self.altitudeLabel.text, latitude_UserLocation, longitude_UserLocation);
             }
 
-            NSLog(@"disconnect Automatically from read Sensors");
+            NSLog(@"--=== didUpdateValueForCharacteristic SEND cancelPeripheralConnection ===--");
             [self.manager cancelPeripheralConnection:self.connectedPeripheral];
         });
         
@@ -451,12 +463,12 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 #pragma mark - restartScan Timer
 - (void)restartScan:(NSTimer *)timer
 {
-    NSLog(@"restartTimer reconnect");
+    NSLog(@"restartTimer nil and send reconnect");
     if (self.restartTimer) {
         [self.restartTimer invalidate];
         self.restartTimer = nil;
     }
-    if ([self.connectedPeripheral.name isEqualToString: @"KYC:9C1D58154DC1"] ) {//9C1D58154DC1 //9C1D58154F80
+    if ([self.connectedPeripheral.name isEqualToString: @"KYC:78A5044563E7"] ) {//9C1D58154DC1 //9C1D58154F80 //78A5044563E7
         [self.manager connectPeripheral:self.connectedPeripheral options:nil];
     }
 //    [self.tableView reloadData];
