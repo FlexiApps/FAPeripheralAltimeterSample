@@ -18,7 +18,7 @@
 @import CoreBluetooth;
 
 static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-
+static NSString *specificPeripheral = @"KYC:9C1D58154F80";////9C1D58154DC1 //9C1D58154F80 //78A5044563E7
 
 @interface ViewController () <MKMapViewDelegate, CLLocationManagerDelegate, CBCentralManagerDelegate, CBPeripheralDelegate, UITextFieldDelegate>
 {
@@ -272,11 +272,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI {
-    
-//    dispatch_async(dispatch_get_main_queue(), ^{
-//        self.currentStateLabel.text = @"Discovering Peripherals";
-//    });
-    
+
     if ([self.devices containsObject:peripheral]) {
         NSLog(@"STEP: PERIPHERAL EXIST in DEVICES: %@", peripheral.name);
         return;
@@ -284,13 +280,12 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
     else {
         NSLog(@"STEP: PERIPHERAL ADDED in DEVICES: %@", peripheral.name);
         [self.devices addObject:peripheral];
-        if ([peripheral.name isEqualToString: @"KYC:78A5044563E7"] ) {//9C1D58154DC1 //9C1D58154F80 //78A5044563E7
+        if ([peripheral.name isEqualToString: specificPeripheral] ) {//9C1D58154DC1 //9C1D58154F80 //78A5044563E7
             [self.manager connectPeripheral:peripheral options:nil];
             [self.manager stopScan];
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             self.collarLabel.text = [NSString stringWithFormat:@"Collar: %@", peripheral.name];
-//            [self.tableView reloadData];
         });
     }
 }
@@ -306,21 +301,13 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
     self.connectedPeripheral = peripheral;
     [NSThread sleepForTimeInterval:4.0f];//Not sure if we need this one
     [self.connectedPeripheral discoverServices:@[[CBUUID UUIDWithString:@"A030"]]];//-- A030 NORMAL SERVICE
-    
-//    dispatch_async(dispatch_get_main_queue(), ^{
-//        self.currentStateLabel.text =  [NSString stringWithFormat:@"Connected to:  %@", peripheral.name];
-//        self.disconnectButton.enabled = YES;
-//        self.disconnectButton.backgroundColor = [UIColor redColor];
-//    });
 }
 
 
 
 - (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
     NSLog(@"--=== STEP: didDisconnectPeripheral: %@ ===--", peripheral.name);
-//    dispatch_async(dispatch_get_main_queue(), ^{
-//        self.currentStateLabel.text =  [NSString stringWithFormat:@"Disconnected:  %@", peripheral.name];
-//    });
+
     //Start 1 min timer
     //Restart the scan after 1 minute
     self.restartTimer = [[NSTimer alloc] initWithFireDate:[NSDate dateWithTimeIntervalSinceNow:restartTimerPeriod]
@@ -335,9 +322,6 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 
 - (void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
     NSLog(@"STEP: Got didFailToConnectPeripheral:  %@", peripheral.name);
-//    dispatch_async(dispatch_get_main_queue(), ^{
-//        self.currentStateLabel.text =  [NSString stringWithFormat:@"Failed to:  %@", peripheral.name];
-//    });
 }
 
 #pragma mark - CBPeripheralDelegate Callbacks
@@ -468,14 +452,9 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
         [self.restartTimer invalidate];
         self.restartTimer = nil;
     }
-    if ([self.connectedPeripheral.name isEqualToString: @"KYC:78A5044563E7"] ) {//9C1D58154DC1 //9C1D58154F80 //78A5044563E7
+    if ([self.connectedPeripheral.name isEqualToString: specificPeripheral] ) {//9C1D58154DC1 //9C1D58154F80 //78A5044563E7
         [self.manager connectPeripheral:self.connectedPeripheral options:nil];
     }
-//    [self.tableView reloadData];
-    
-    //    self.devices = nil;
-    //    NSDictionary *xOptions = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber  numberWithBool:YES], CBCentralManagerScanOptionAllowDuplicatesKey, nil];
-    //    [self.manager scanForPeripheralsWithServices:nil options:xOptions];
 }
 
 #pragma mark - error
@@ -496,29 +475,6 @@ static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 - (void)mailComposeController:(MFMailComposeViewController *)mailer didFinishWithResult:(MFMailComposeResult)result error:(NSError *)error {
     [self becomeFirstResponder];
     [mailer dismissViewControllerAnimated:YES completion:nil];
-}
-
-
-#pragma mark - textfield delegate
-- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string
-{
-    self.sensorPeriodTime.text = textField.text;
-    restartTimerPeriod = [textField.text doubleValue];
-    return YES;
-}
-- (void)textFieldDidEndEditing:(UITextField *)textField {
-    self.sensorPeriodTime.text = textField.text;
-    restartTimerPeriod = [textField.text doubleValue];
-    NSLog(@"restartTimerPeriod | %d", restartTimerPeriod);
-    [self.view endEditing:YES];
-}
-
-// It is important for you to hide the keyboard
-- (BOOL)textFieldShouldReturn:(UITextField *)textField
-{
-    
-    [textField resignFirstResponder];
-    return YES;
 }
 
 @end
