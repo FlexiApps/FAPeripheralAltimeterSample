@@ -18,7 +18,7 @@
 @import CoreBluetooth;
 
 static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-static NSString *specificPeripheral = @"KYC:9C1D58154F80";////9C1D58154DC1 //9C1D58154F80 //78A5044563E7
+static NSString *specificPeripheral = @"KYC:9C1D58154F80";////9C1D58154DC1 //9C1D58154F80 //78A5044563E7 //9C1D58154DF0 //9C1D58154DE2
 
 @interface ViewController () <MKMapViewDelegate, CLLocationManagerDelegate, CBCentralManagerDelegate, CBPeripheralDelegate, UITextFieldDelegate>
 {
@@ -234,40 +234,30 @@ static NSString *specificPeripheral = @"KYC:9C1D58154F80";////9C1D58154DC1 //9C1
 #pragma mark - CBCentralManagerDelegate Callbacks
 
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central {
-    if (central.state == CBManagerStatePoweredOff) {
-        NSLog(@"CBCentralManager not powered on yet");
-        
-        [self.manager cancelPeripheralConnection:self.connectedPeripheral];
-        self.manager = nil;
-        return;
-    }
-    
-    if (central.state == CBManagerStateUnauthorized) {
-        NSLog(@"CBCentralManager CBManagerStateUnauthorized");
-        [self.manager cancelPeripheralConnection:self.connectedPeripheral];
-        self.manager = nil;
-        return;
-        
-    }
-    
-    if (central.state == CBManagerStateUnknown) {
-        NSLog(@"CBCentralManager CBManagerStateUnknown");
-        [self.manager cancelPeripheralConnection:self.connectedPeripheral];
-        self.manager = nil;
-        return;
-    }
-    
-    if (central.state == CBManagerStateUnsupported) {
-        NSLog(@"CBCentralManager CBManagerStateUnsupported");
-        [self.manager cancelPeripheralConnection:self.connectedPeripheral];
-        self.manager = nil;
-        return;
-    }
-    
-    if (central.state == CBManagerStatePoweredOn) {
-        NSLog(@"CBCentralManager CBManagerStatePoweredOn");
-        NSDictionary *xOptions = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber  numberWithBool:YES], CBCentralManagerScanOptionAllowDuplicatesKey, nil];
-        [self.manager scanForPeripheralsWithServices:nil options:xOptions];
+    switch (central.state)
+    {
+        case CBManagerStateUnauthorized:
+        case CBManagerStateResetting:
+        case CBManagerStateUnknown:
+        case CBManagerStateUnsupported:
+        case CBManagerStatePoweredOff:
+        {
+            if (self.connectedPeripheral) {
+                [self.manager cancelPeripheralConnection:self.connectedPeripheral];
+            }
+            self.manager = nil;
+            
+            break;
+        }
+        case CBManagerStatePoweredOn:
+        {
+            NSLog(@"CBCentralManager CBManagerStatePoweredOn");
+            NSDictionary *xOptions = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber  numberWithBool:YES], CBCentralManagerScanOptionAllowDuplicatesKey, nil];
+            [self.manager scanForPeripheralsWithServices:nil options:xOptions];
+            break;
+        }
+        default:
+            break;
     }
 }
 
@@ -396,7 +386,9 @@ static NSString *specificPeripheral = @"KYC:9C1D58154F80";////9C1D58154DC1 //9C1
         
         // 4, Temperature
         [[rawData subdataWithRange:NSMakeRange(4, 1)] getBytes:&temperature length:sizeof(temperature)];
-        NSLog(@"TEMPERATURE IS %u",(unsigned int)temperature);
+        unsigned int temp = temperature;
+        int actualInt = (char)temp;
+        NSLog(@"TEMPERATURE IS %d",actualInt);
         NSLog(@"RAWDATA2 : %@",rawData);
         
         // 5, Wet (uint8). Values=1 if wet, otherwise 0.
@@ -427,9 +419,9 @@ static NSString *specificPeripheral = @"KYC:9C1D58154F80";////9C1D58154DC1 //9C1
         [[rawData subdataWithRange:NSMakeRange(17, 2)] getBytes:&FirmwareCC2540 length:sizeof(FirmwareCC2540)];
         FirmwareCC2540 = CFSwapInt32HostToBig(FirmwareCC2540);
         NSLog(@"Swaaped FirmwareCC2540 %u",(unsigned int)FirmwareCC2540);
-        
+
         dispatch_async(dispatch_get_main_queue(), ^{
-            self.sensorDataLabel.text =  [NSString stringWithFormat:@"Pressure | %0.2f | Temp | %u | %@ |",(float)pressure/100, (unsigned int)temperature, rawData];
+            self.sensorDataLabel.text =  [NSString stringWithFormat:@"Pressure | %0.2f | Temp | %d | %@ |",(float)pressure/100, actualInt, rawData];
             self.countSensorLabel.text = [NSString stringWithFormat: @"Count sensor: %d", countSensor+1];
             self.batteryLabel.text = [NSString stringWithFormat: @"Battery | %@",socString];
             if (latitude_UserLocation != 0 || longitude_UserLocation != 0) {
